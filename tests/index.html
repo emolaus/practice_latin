@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Practice Latin tests</title>
+  <style>
+    body { font-family: Consolas, monospace; margin: 20px; }
+    .pass { color: #2f6b3a; }
+    .fail { color: #a12a1a; font-weight: bold; }
+    ul { list-style: none; padding: 0; }
+    #summary { font-size: 1.4em; }
+  </style>
+</head>
+<body>
+  <h1>Practice Latin tests</h1>
+  <p id="summary">Running&hellip;</p>
+  <ul id="results"></ul>
+
+  <script src="harness.js"></script>
+  <script src="../js/core.js"></script>
+  <script src="../js/openai.js"></script>
+  <script src="../js/tutor.js"></script>
+
+  <script src="core.test.js"></script>
+  <script src="openai.test.js"></script>
+  <script src="tutor.test.js"></script>
+  <script>runTests();</script>
+</body>
+</html>
+

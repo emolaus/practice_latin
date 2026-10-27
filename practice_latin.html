@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Practice Latin</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>Practice Latin</h1>
+    <p class="tagline">Translate English sentences into Latin using your own vocabulary.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="panel" id="panel-api">
+        <h2>1. OpenAI</h2>
+        <label for="api-key">API key</label>
+        <div class="row">
+          <input type="password" id="api-key" placeholder="sk-..." autocomplete="off" spellcheck="false">
+          <button type="button" id="toggle-key" class="secondary" title="Show / hide key">Show</button>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="remember-key"> Remember key in this browser</label>
+
+        <label for="model-select">Model</label>
+        <div class="row">
+          <select id="model-select"></select>
+          <button type="button" id="refresh-models" class="secondary" title="Load models available to your key">&#x21bb;</button>
+        </div>
+        <p class="status" id="model-status"></p>
+      </section>
+
+      <section class="panel" id="panel-vocab">
+        <h2>2. Vocabulary</h2>
+        <p class="status" id="vocab-status">Loading vocabulary.txt&hellip;</p>
+        <div id="vocab-list" class="chips"></div>
+        <label class="file-drop" id="vocab-drop">
+          <input type="file" id="vocab-file" accept=".txt,text/plain">
+          <span>Choose or drop <code>vocabulary.txt</code></span>
+        </label>
+      </section>
+
+      <section class="panel" id="panel-grammar">
+        <h2>3. Grammar to practise</h2>
+        <div id="grammar-options"></div>
+        <button type="button" id="grammar-reset" class="link">Reset to defaults</button>
+      </section>
+    </aside>
+
+    <main class="chat">
+      <div class="chat-toolbar">
+        <button type="button" id="new-sentence">New sentence</button>
+        <button type="button" id="show-answer" class="secondary">Show answer</button>
+        <span class="spacer"></span>
+        <button type="button" id="clear-history" class="link">Clear history</button>
+      </div>
+
+      <div id="history" class="history" aria-live="polite"></div>
+
+      <form id="answer-form" class="answer-form">
+        <textarea id="answer" rows="2" placeholder="Type your Latin translation&hellip; (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button type="submit" id="send">Check</button>
+      </form>
+    </main>
+  </div>
+
+  <script src="js/core.js"></script>
+  <script src="js/openai.js"></script>
+  <script src="js/tutor.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+
