@@ -82,6 +82,7 @@ button:disabled { opacity: .5; cursor: default; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
 .chip { background: var(--system); border: 1px solid var(--border); border-radius: 12px; padding: 1px 9px; font-size: .85rem; font-style: italic; }
+.vocab-category { font-weight: bold; font-size: .85rem; margin-top: 6px; }
 
 .file-drop {
   display: block;

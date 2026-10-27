@@ -13,7 +13,7 @@
    * @param {object} deps
    *   client:        object with chat(model, messages) -> Promise<string>
    *   getModel:      () => string
-   *   getVocabulary: () => string[]
+   *   getVocabulary: () => Array<{word, category}> (plain strings also accepted)
    *   getGrammar:    () => string[]  (grammar ids)
    */
   function Tutor(deps) {
@@ -32,7 +32,7 @@
 
   Tutor.prototype._checkReady = function () {
     if (!this.getModel()) throw new Error('Please choose a model.');
-    if (!this.getVocabulary().length) throw new Error('No vocabulary loaded. Please load vocabulary.txt.');
+    if (!this.getVocabulary().length) throw new Error('No vocabulary loaded. Please load vocabulary.md.');
     if (!this.getGrammar().length) throw new Error('Please tick at least one grammar form.');
   };
 

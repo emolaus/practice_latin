@@ -9,11 +9,14 @@
     apiKey: 'pl.apiKey',
     model: 'pl.model',
     grammar: 'pl.grammar',
-    vocabText: 'pl.vocabText',
-    vocabSource: 'pl.vocabSource',
+    // New keys for the markdown format, so a stale cached vocabulary.txt is not reused.
+    vocabText: 'pl.vocabMd',
+    vocabSource: 'pl.vocabMdSource',
     tutor: 'pl.tutorState',
     history: 'pl.history',
   };
+
+  const VOCAB_FILE = 'vocabulary.md';
 
   const storage = (function () {
     try { localStorage.setItem('pl.test', '1'); localStorage.removeItem('pl.test'); return localStorage; }
@@ -107,19 +110,32 @@
 
   // ---------------------------------------------------------------- vocabulary
   function applyVocabulary(text, source, persist) {
-    const words = PL.parseVocabulary(text);
-    vocabulary = words;
+    const entries = PL.parseVocabulary(text);
+    vocabulary = entries;
     el.vocabList.innerHTML = '';
-    words.forEach(function (w) {
-      const c = document.createElement('span');
-      c.className = 'chip';
-      c.textContent = w;
-      el.vocabList.appendChild(c);
+    PL.groupVocabulary(entries).forEach(function (group) {
+      if (group.category) {
+        const h = document.createElement('div');
+        h.className = 'vocab-category';
+        h.textContent = group.category;
+        el.vocabList.appendChild(h);
+      }
+      const chips = document.createElement('div');
+      chips.className = 'chips';
+      group.words.forEach(function (w) {
+        const c = document.createElement('span');
+        c.className = 'chip';
+        c.textContent = w;
+        chips.appendChild(c);
+      });
+      el.vocabList.appendChild(chips);
     });
-    if (!words.length) {
-      setStatus(el.vocabStatus, 'The vocabulary file is empty. Add one Latin word per line.', 'error');
+    if (!entries.length) {
+      setStatus(el.vocabStatus,
+        'The vocabulary file has no words. Add a heading such as "# Nouns" followed by one Latin word per line.',
+        'error');
     } else {
-      setStatus(el.vocabStatus, words.length + ' words loaded from ' + source + '.', 'ok');
+      setStatus(el.vocabStatus, entries.length + ' words loaded from ' + source + '.', 'ok');
     }
     if (persist) {
       sset(KEYS.vocabText, text);
@@ -127,12 +143,12 @@
     }
   }
 
-  /** Try to read ./vocabulary.txt. Browsers often block this on file:// URLs. */
+  /** Try to read ./vocabulary.md. Browsers often block this on file:// URLs. */
   function fetchVocabularyFile() {
     return new Promise(function (resolve, reject) {
       try {
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', 'vocabulary.txt?t=' + Date.now(), true);
+        xhr.open('GET', VOCAB_FILE + '?t=' + Date.now(), true);
         xhr.overrideMimeType('text/plain; charset=utf-8');
         xhr.onload = function () {
           // status is 0 for successful file:// loads
@@ -174,15 +190,15 @@
 
     try {
       const text = await fetchVocabularyFile();
-      applyVocabulary(text, 'vocabulary.txt', true);
+      applyVocabulary(text, VOCAB_FILE, true);
     } catch (e) {
       const cached = sget(KEYS.vocabText);
       if (cached) {
-        applyVocabulary(cached, 'saved copy of ' + (sget(KEYS.vocabSource) || 'vocabulary.txt'), false);
+        applyVocabulary(cached, 'saved copy of ' + (sget(KEYS.vocabSource) || VOCAB_FILE), false);
         el.vocabStatus.textContent += ' Your browser blocked reading the file directly; choose the file again after editing it.';
       } else {
         setStatus(el.vocabStatus,
-          'Your browser does not allow reading vocabulary.txt automatically from disk. Please choose or drop the file below.',
+          'Your browser does not allow reading ' + VOCAB_FILE + ' automatically from disk. Please choose or drop the file below.',
           'error');
       }
     }

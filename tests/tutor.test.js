@@ -22,7 +22,13 @@
     const tutor = new PL.Tutor({
       client: client,
       getModel: function () { return 'model' in opts ? opts.model : 'gpt-test'; },
-      getVocabulary: function () { return opts.vocab || ['nauta', 'silva', 'amo']; },
+      getVocabulary: function () {
+        return opts.vocab || [
+          { word: 'nauta', category: 'Nouns' },
+          { word: 'silva', category: 'Nouns' },
+          { word: 'amo', category: 'Verbs' },
+        ];
+      },
       getGrammar: function () { return opts.grammar || ['accusative', 'plural']; },
     });
     return { tutor: tutor, client: client };

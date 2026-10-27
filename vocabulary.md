@@ -1,3 +1,4 @@
+# Nouns
 agricola
 aqua
 dea
@@ -8,7 +9,10 @@ nauta
 patria
 puella
 silva
+
+# Verbs
 amo
 fugo
 porto
+pugno
 sum

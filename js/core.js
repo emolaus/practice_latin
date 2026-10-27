@@ -61,7 +61,7 @@
     },
   ];
 
-  const DEFAULT_GRAMMAR = ['accusative', 'genitive', 'singular', 'plural'];
+  const DEFAULT_GRAMMAR = ['nominative', 'accusative', 'genitive', 'singular', 'plural', 'present', 'indicative'];
 
   /** Used when the model list cannot be fetched from the API. */
   const FALLBACK_MODELS = ['gpt-5-mini', 'gpt-5', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'];
@@ -70,24 +70,64 @@
   const PREFERRED_MODELS = ['gpt-5-mini', 'gpt-4.1-mini', 'gpt-4o-mini', 'gpt-5', 'gpt-4.1', 'gpt-4o'];
 
   /**
-   * Parse the contents of vocabulary.txt.
-   * - One entry per line; the whole line is kept (e.g. "amo, amare - to love").
-   * - Text after '#' is a comment. Blank lines are ignored.
+   * Parse the contents of vocabulary.md, a very simple markdown file:
+   *
+   *   # Nouns
+   *   agricola
+   *   aqua
+   *
+   *   # Verbs
+   *   amo
+   *
+   * - A heading (any level, "# " .. "###### ") starts a category, e.g. "Nouns".
+   * - Every other non-blank line is one vocabulary entry; the whole line is kept
+   *   (e.g. "amo, amare - to love"). Markdown list markers ("- ", "* ", "+ ",
+   *   "1. ") are stripped, so bulleted lists work too.
+   * - HTML comments (<!-- ... -->, single line) are ignored.
+   * - Entries before the first heading get the category "" (uncategorised).
    * - Duplicates (case-insensitive) are removed, first occurrence wins.
+   *
+   * Returns [{ word, category }].
    */
   function parseVocabulary(text) {
     if (typeof text !== 'string') return [];
     const seen = new Set();
     const out = [];
+    let category = '';
     text.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(function (line) {
-      const clean = line.replace(/#.*$/, '').trim();
+      const clean = line.replace(/<!--.*?-->/g, '').trim();
       if (!clean) return;
-      const key = clean.toLowerCase();
+      const heading = clean.match(/^#{1,6}\s+(.*?)\s*#*$/);
+      if (heading) { category = heading[1].trim(); return; }
+      if (/^#/.test(clean)) return; // "#" with no text
+      const word = clean.replace(/^(?:[-*+]|\d+[.)])\s+/, '').trim();
+      if (!word) return;
+      const key = word.toLowerCase();
       if (seen.has(key)) return;
       seen.add(key);
-      out.push(clean);
+      out.push({ word: word, category: category });
     });
     return out;
+  }
+
+  /**
+   * Group vocabulary entries by category, preserving first-seen order.
+   * Accepts [{word, category}] or plain strings (treated as uncategorised).
+   * Returns [{ category, words: [] }].
+   */
+  function groupVocabulary(entries) {
+    const groups = [];
+    const index = {};
+    (entries || []).forEach(function (e) {
+      const word = typeof e === 'string' ? e : e.word;
+      const category = typeof e === 'string' ? '' : (e.category || '');
+      if (!(category in index)) {
+        index[category] = groups.length;
+        groups.push({ category: category, words: [] });
+      }
+      groups[index[category]].words.push(word);
+    });
+    return groups;
   }
 
   /** Map grammar ids to human readable labels grouped by category. */
@@ -112,7 +152,10 @@
       '- Use Latin only when quoting or highlighting specific Latin words; wrap every Latin word or phrase in **double asterisks**.',
       '',
       'Vocabulary - the Latin sentence must use ONLY these Latin words (in any inflected form):',
-      vocabulary.map(function (w) { return '- ' + w; }).join('\n'),
+      groupVocabulary(vocabulary).map(function (g) {
+        return (g.category ? g.category : 'Other words') + ':\n' +
+          g.words.map(function (w) { return '- ' + w; }).join('\n');
+      }).join('\n'),
       '',
       'Grammar forms to practise (each sentence should exercise as many of these as is natural):',
       grammar.map(function (g) { return '- ' + g; }).join('\n'),
@@ -278,6 +321,7 @@
     DEFAULT_GRAMMAR: DEFAULT_GRAMMAR,
     FALLBACK_MODELS: FALLBACK_MODELS,
     parseVocabulary: parseVocabulary,
+    groupVocabulary: groupVocabulary,
     describeGrammar: describeGrammar,
     buildSystemPrompt: buildSystemPrompt,
     buildNewProblemMessage: buildNewProblemMessage,

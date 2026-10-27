@@ -3,28 +3,75 @@
   const PL = window.PL;
 
   // ---- vocabulary
-  test('parseVocabulary: one word per line, CRLF, blank lines', function () {
-    assert.deepEqual(PL.parseVocabulary('dea\r\nnauta\r\n\r\n  silva  \n'), ['dea', 'nauta', 'silva']);
+  function words(entries) { return entries.map(function (e) { return e.word; }); }
+
+  test('parseVocabulary: headings become categories (shipped vocabulary.md format)', function () {
+    const text = '# Nouns\r\nagricola\r\naqua\r\n\r\n# Verbs\r\namo\r\nsum';
+    assert.deepEqual(PL.parseVocabulary(text), [
+      { word: 'agricola', category: 'Nouns' },
+      { word: 'aqua', category: 'Nouns' },
+      { word: 'amo', category: 'Verbs' },
+      { word: 'sum', category: 'Verbs' },
+    ]);
   });
 
-  test('parseVocabulary: comments, BOM and duplicates', function () {
-    const text = '\uFEFF# my words\namo, amare - to love  # verb\nAmo, amare - to love\nfugo\n';
-    assert.deepEqual(PL.parseVocabulary(text), ['amo, amare - to love', 'fugo']);
+  test('parseVocabulary: any heading level, trailing #s and whitespace', function () {
+    const entries = PL.parseVocabulary('## Adjectives ##\n  bonus  \n###   Adverbs\nbene\n');
+    assert.deepEqual(entries, [
+      { word: 'bonus', category: 'Adjectives' },
+      { word: 'bene', category: 'Adverbs' },
+    ]);
+  });
+
+  test('parseVocabulary: words before any heading are uncategorised', function () {
+    assert.deepEqual(PL.parseVocabulary('dea\n# Nouns\nnauta'), [
+      { word: 'dea', category: '' },
+      { word: 'nauta', category: 'Nouns' },
+    ]);
+  });
+
+  test('parseVocabulary: markdown list markers are stripped, whole line kept', function () {
+    const text = '# Verbs\n- amo, amare - to love\n* fugo\n+ porto\n1. sum';
+    assert.deepEqual(words(PL.parseVocabulary(text)), ['amo, amare - to love', 'fugo', 'porto', 'sum']);
+  });
+
+  test('parseVocabulary: HTML comments, BOM, empty headings and duplicates', function () {
+    const text = '\uFEFF<!-- my list -->\n# Nouns\nnauta <!-- sailor -->\n#\nNauta\nsilva\n';
+    assert.deepEqual(PL.parseVocabulary(text), [
+      { word: 'nauta', category: 'Nouns' },
+      { word: 'silva', category: 'Nouns' },
+    ]);
+  });
+
+  test('parseVocabulary: a "#word" without a space is not a heading but is skipped', function () {
+    assert.deepEqual(words(PL.parseVocabulary('#hashtag\namo')), ['amo']);
   });
 
   test('parseVocabulary: non-string input gives empty list', function () {
     assert.deepEqual(PL.parseVocabulary(undefined), []);
     assert.deepEqual(PL.parseVocabulary(''), []);
+    assert.deepEqual(PL.parseVocabulary('# Nouns\n\n# Verbs\n'), []);
   });
 
-  test('parseVocabulary: handles the shipped vocabulary.txt format (no trailing newline)', function () {
-    const text = 'dea\r\nnauta\r\nacricola\r\npuella\r\nsilva\r\namo\r\nfugo';
-    assert.equal(PL.parseVocabulary(text).length, 7);
+  test('groupVocabulary groups by category in first-seen order and accepts strings', function () {
+    const groups = PL.groupVocabulary([
+      { word: 'nauta', category: 'Nouns' },
+      { word: 'amo', category: 'Verbs' },
+      { word: 'silva', category: 'Nouns' },
+      'dea',
+    ]);
+    assert.deepEqual(groups, [
+      { category: 'Nouns', words: ['nauta', 'silva'] },
+      { category: 'Verbs', words: ['amo'] },
+      { category: '', words: ['dea'] },
+    ]);
+    assert.deepEqual(PL.groupVocabulary(undefined), []);
   });
 
   // ---- grammar
-  test('DEFAULT_GRAMMAR is Accusative, Genitive, Singular, Plural', function () {
-    assert.deepEqual(PL.DEFAULT_GRAMMAR.slice().sort(), ['accusative', 'genitive', 'plural', 'singular']);
+  test('DEFAULT_GRAMMAR: Nominative, Accusative, Genitive, Singular, Plural, Present, Indicative', function () {
+    assert.deepEqual(PL.DEFAULT_GRAMMAR.slice().sort(),
+      ['accusative', 'genitive', 'indicative', 'nominative', 'plural', 'present', 'singular']);
   });
 
   test('all grammar ids are unique and defaults exist', function () {
@@ -50,6 +97,11 @@
     assert.includes(p, 'Always communicate in English');
     assert.includes(p, '**double asterisks**');
     assert.includes(p, 'JSON');
+  });
+
+  test('buildSystemPrompt lists vocabulary under its categories', function () {
+    const p = PL.buildSystemPrompt(PL.parseVocabulary('# Nouns\nnauta\n# Verbs\namo'), ['accusative']);
+    assert.includes(p, 'Nouns:\n- nauta\nVerbs:\n- amo');
   });
 
   test('buildNewProblemMessage asks for JSON and lists recent sentences', function () {

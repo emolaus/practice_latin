@@ -10,7 +10,7 @@ your default browser. The browser talks to the OpenAI REST API directly, using t
 ```
 practice-latin/
 ├── practice_latin.html      Entry point (open by double-clicking)
-├── vocabulary.txt           User-maintained vocabulary, one Latin word per line
+├── vocabulary.md            User-maintained vocabulary: "# Category" headings, one word per line
 ├── css/style.css            Styling
 ├── js/
 │   ├── core.js              Pure logic: vocabulary parsing, grammar options, prompts,
@@ -52,19 +52,36 @@ one global namespace, `window.PL`. There are no dependencies and no build step.
   otherwise the first model in the list.
 - If the list can't be fetched, a fallback list (`PL.FALLBACK_MODELS`) is shown along with the error.
 
-### Vocabulary (`vocabulary.txt`)
-- Format (`PL.parseVocabulary`): one entry per line. Each line is kept whole, so you can write
-  `amo, amare - to love`. Text after `#` is a comment. Blank lines and duplicates (case-insensitive)
-  are ignored, and a UTF-8 BOM is stripped.
+### Vocabulary (`vocabulary.md`)
+- Format (`PL.parseVocabulary`): a very simple markdown file.
+  ```markdown
+  # Nouns
+  agricola
+  aqua
+
+  # Verbs
+  amo
+  ```
+  - A heading of any level (`#` to `######`) starts a **category**, such as Nouns or Verbs.
+  - Every other non-blank line is one entry. The whole line is kept, so `amo, amare - to love` works.
+  - List markers (`- `, `* `, `+ `, `1. `) are stripped, so bulleted lists work too.
+  - Single-line HTML comments (`<!-- … -->`) are ignored, and so is a bare `#` or a `#word` with no space.
+  - Words placed before any heading are uncategorised.
+  - Duplicates (case-insensitive) are dropped, and a UTF-8 BOM is stripped.
+  - The parser returns `[{word, category}]`. `PL.groupVocabulary` groups the entries by category in
+    the order they first appear. It also accepts plain strings and treats them as uncategorised.
+- The system prompt lists the vocabulary under its categories (for example `Nouns:` followed by
+  `- agricola`), so the model knows each word's part of speech.
 - Loading strategy:
-  1. On startup, the app tries to read `./vocabulary.txt` with `XMLHttpRequest`. This works when a
+  1. On startup, the app tries to read `./vocabulary.md` with `XMLHttpRequest`. This works when a
      browser allows `file://` reads, or when the page is served over HTTP.
   2. Chrome and Edge block this by default on `file://`. In that case you choose or drag-and-drop
-     `vocabulary.txt` once.
-  3. The last loaded vocabulary text is cached in `localStorage` (`pl.vocabText`, `pl.vocabSource`)
+     `vocabulary.md` once. The file picker accepts `.md`, `.markdown` and `.txt`.
+  3. The last loaded vocabulary text is cached in `localStorage` (`pl.vocabMd`, `pl.vocabMdSource`)
      and reused on later visits. The status line says it is a saved copy. **After editing
-     vocabulary.txt, choose the file again** to refresh it.
-- The loaded words appear as chips in the sidebar.
+     vocabulary.md, choose the file again** to refresh it. The cache keys changed when the app moved
+     from `vocabulary.txt` to `vocabulary.md`, so an old cached `.txt` vocabulary is never reused.
+- The loaded words appear in the sidebar as chips, grouped under their category headings.
 
 ### Grammar selection
 - The checkboxes come from `PL.GRAMMAR_GROUPS`:
@@ -73,8 +90,10 @@ one global namespace, `window.PL`. There are no dependencies and no build step.
   - Tense: Present, Imperfect, Future, Perfect, Pluperfect, Future perfect
   - Person: 1st, 2nd, 3rd
   - Mood & voice: Indicative, Imperative, Infinitive, Passive voice
-- Defaults (`PL.DEFAULT_GRAMMAR`), as the backlog requires: **Accusative, Genitive, Singular, Plural**.
-- Your selection is saved in `localStorage` (`pl.grammar`). **Reset to defaults** restores the defaults.
+- Defaults (`PL.DEFAULT_GRAMMAR`), as the backlog requires: **Nominative, Accusative, Genitive,
+  Singular, Plural, Present, Indicative**.
+- Your selection is saved in `localStorage` (`pl.grammar`) as soon as you change a checkbox. Once it
+  is saved, it is used instead of the defaults. **Reset to defaults** restores the defaults.
 - The prompt tells the model to practise the selected forms. Other forms may appear only when a
   grammatical sentence needs them (for example a nominative subject and a present-tense verb).
 
@@ -125,7 +144,7 @@ model reply can't inject markup or scripts.
 | `pl.apiKey` | API key (only if "Remember key" is ticked) |
 | `pl.model` | Last chosen model |
 | `pl.grammar` | JSON array of selected grammar ids |
-| `pl.vocabText`, `pl.vocabSource` | Cached vocabulary file contents and where they came from |
+| `pl.vocabMd`, `pl.vocabMdSource` | Cached vocabulary.md contents and where they came from |
 | `pl.history` | JSON array of chat log entries `{role, kind, text, ts}` |
 | `pl.tutorState` | JSON snapshot of the current tutor session |
 
@@ -140,7 +159,8 @@ model reply can't inject markup or scripts.
   This runs the unit tests in headless Chrome or Edge. It then smoke-tests `practice_latin.html`: the
   page loads, the grammar options and model list are built, and the welcome message appears. The
   script exits with code 1 on any failure.
-- Coverage: vocabulary parsing, grammar defaults and description, prompt contents, JSON reply
+- Coverage: markdown vocabulary parsing (categories, heading levels, list markers, comments,
+  duplicates) and grouping, grammar defaults and description, prompt contents, JSON reply
   parsing and validation, model filtering and default choice, HTML escaping and rendering (including
   XSS), the history store, the OpenAI client (request shape, errors, network failures), and the
   tutor (fresh context per problem, context discarded after a correct answer, error resilience,
