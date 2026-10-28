@@ -23,7 +23,7 @@ The user decides which grammar forms to practice by means of check boxes (Defaul
 
 The app keeps a history of the conversation.
 
-The app uses the OpenAI API. The app always communicates in English except when highlighting certain words in Latin. When the user responds correctly, a new context is started with the API, in order to keep the context windows decluttered.
+The app uses the OpenAI Responses API. The app always communicates in English except when highlighting certain words in Latin. When the user responds correctly, a new context is started with the API, in order to keep the context windows decluttered.
 
 The web app can be run without a server - just double-click practice_latin.html to open it in your default browser.
 

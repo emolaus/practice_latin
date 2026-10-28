@@ -15,7 +15,7 @@ practice-latin/
 ├── js/
 │   ├── core.js              Pure logic: vocabulary parsing, grammar options, prompts,
 │   │                        reply parsing, model filtering, safe rendering, history store
-│   ├── openai.js            Minimal OpenAI REST client (fetch can be injected for tests)
+│   ├── openai.js            Minimal OpenAI Responses API client (fetch can be injected for tests)
 │   ├── tutor.js             Practice session logic: one API context per problem sentence
 │   └── app.js               DOM wiring, persistence (localStorage), event handlers
 ├── tests/
@@ -128,9 +128,26 @@ Each problem sentence gets its own API **context** (a message list):
 State is only updated after a successful API call. A network or parse error does not corrupt the
 context. You can simply retry.
 
-Requests use `POST /v1/chat/completions` with `response_format: {type: "json_object"}`. No
-`temperature` is sent, because reasoning models (o-series, gpt-5) reject non-default values.
-`PL.parseJsonReply` also accepts JSON wrapped in code fences or extra text.
+#### OpenAI Responses API
+All model calls go through `OpenAIClient.respond(model, messages)` in `openai.js`, which uses the
+**Responses API** (`POST /v1/responses`). The Chat Completions API is not used.
+- `OpenAIClient.buildResponsesBody` turns the tutor's chat-style message list into a request:
+  - `system` messages become the `instructions` field.
+  - User and assistant turns are sent as `input` items (`{role, content}`).
+  - `text: {format: {type: "json_object"}}` turns on JSON mode.
+  - `store: false` is set.
+- The conversation context is **managed client-side**: every request contains the whole context of
+  the current problem. `previous_response_id` and server-side storage are deliberately not used, for
+  three reasons:
+  - Starting a fresh context after a correct answer just means discarding the local message list.
+  - The session survives a page reload (see `pl.tutorState`).
+  - Nothing is stored on OpenAI's side.
+- `OpenAIClient.extractOutputText` reads the reply text. It joins every `output_text` part of the
+  `message` items in `output` and skips `reasoning` items. It also uses the `output_text`
+  convenience field when one is present. It raises clear errors for refusals, `incomplete`
+  responses (with the reason, for example `max_output_tokens`), `failed` responses and empty output.
+- No `temperature` is sent, because reasoning models reject non-default values.
+- `PL.parseJsonReply` also accepts JSON wrapped in code fences or extra text.
 
 ### Conversation history
 - Every problem, attempt, piece of feedback and info message is stored in `localStorage`
@@ -170,7 +187,8 @@ model reply can't inject markup or scripts.
 - Coverage: markdown vocabulary parsing (categories, heading levels, list markers, comments,
   duplicates) and grouping, grammar defaults and description, prompt contents, JSON reply
   parsing and validation, model filtering and default choice, HTML escaping and rendering (including
-  XSS), the history store, the OpenAI client (request shape, errors, network failures), and the
+  XSS), the history store, the OpenAI Responses API client (request body
+  mapping, output text extraction, refusals and incomplete or failed responses, errors, network failures), and the
   tutor (fresh context per problem, context discarded after a correct answer, error resilience,
   input validation, reveal, recent-sentence cap, serialize/restore).
 - No Node.js or Python is needed. The tests run in the same browser environment as the app.

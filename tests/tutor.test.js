@@ -7,7 +7,7 @@
     const calls = [];
     return {
       calls: calls,
-      chat: function (model, messages) {
+      respond: function (model, messages) {
         calls.push({ model: model, messages: JSON.parse(JSON.stringify(messages)) });
         const r = replies.shift();
         if (r instanceof Error) return Promise.reject(r);

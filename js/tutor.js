@@ -11,7 +11,7 @@
 
   /**
    * @param {object} deps
-   *   client:        object with chat(model, messages) -> Promise<string>
+   *   client:        object with respond(model, messages) -> Promise<string>
    *   getModel:      () => string
    *   getVocabulary: () => Array<{word, category}> (plain strings also accepted)
    *   getGrammar:    () => string[]  (grammar ids)
@@ -43,7 +43,7 @@
       { role: 'system', content: PL.buildSystemPrompt(this.getVocabulary(), this.getGrammar()) },
       { role: 'user', content: PL.buildNewProblemMessage(this.recent) },
     ];
-    const reply = await this.client.chat(this.getModel(), messages);
+    const reply = await this.client.respond(this.getModel(), messages);
     const problem = PL.validateProblem(PL.parseJsonReply(reply));
 
     // Only commit state once the call succeeded.
@@ -64,7 +64,7 @@
     if (!this.problem || this.solved) throw new Error('There is no open sentence. Ask for a new sentence first.');
 
     const messages = this.messages.concat({ role: 'user', content: PL.buildAnswerMessage(answer) });
-    const reply = await this.client.chat(this.getModel(), messages);
+    const reply = await this.client.respond(this.getModel(), messages);
     const evaluation = PL.validateEvaluation(PL.parseJsonReply(reply));
 
     if (evaluation.correct) {
