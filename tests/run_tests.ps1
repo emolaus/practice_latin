@@ -44,6 +44,8 @@ $checks = [ordered]@{
   'grammar checkboxes rendered (21)' = ([regex]::Matches($app, 'type="checkbox" value="')).Count -eq 21
   'grammar groups rendered (5)'      = ([regex]::Matches($app, '<legend>')).Count -eq 5
   'model list populated'             = $app -match '<option value="gpt-'
+  'page title set'                   = $app -match '<title>Practice Latin Vocabulary and Grammar</title>'
+  'heading set'                      = $app -match '<h1>Practice Latin Vocabulary and Grammar</h1>'
   'welcome message shown'            = $app -match 'Welcome!'
 }
 foreach ($k in $checks.Keys) {

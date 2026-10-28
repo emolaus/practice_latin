@@ -48,7 +48,7 @@ one global namespace, `window.PL`. There are no dependencies and no build step.
   `PL.filterChatModels` then keeps only chat-capable models (`gpt-*`, `o<digit>*`, `chatgpt-*`). It
   drops audio, realtime, TTS, transcription, image, search, embedding, moderation, codex and similar models.
 - Default choice (`PL.pickDefaultModel`): your last saved model (`pl.model`), otherwise the first
-  available model from `gpt-5-mini`, `gpt-4.1-mini`, `gpt-4o-mini`, `gpt-5`, `gpt-4.1` or `gpt-4o`,
+  available model from `gpt-6-luna` (**the default**), `gpt-5-mini`, `gpt-4.1-mini`, `gpt-4o-mini`, `gpt-5`, `gpt-4.1` or `gpt-4o`,
   otherwise the first model in the list.
 - If the list can't be fetched, a fallback list (`PL.FALLBACK_MODELS`) is shown along with the error.
 

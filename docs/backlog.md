@@ -29,4 +29,6 @@ The web app can be run without a server - just double-click practice_latin.html 
 
 The user starts by pasting an OpenAI API KEY into a text field.
 
-The user can choose which model from OpenAI to interact with.
+The user can choose which model from OpenAI to interact with. The default model is gpt-6-luna.
+
+The app's title is "Practice Latin Vocabulary and Grammar".

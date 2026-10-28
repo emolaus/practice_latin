@@ -178,6 +178,13 @@
     assert.equal(PL.pickDefaultModel([], null), '');
   });
 
+  test('gpt-6-luna is the default model when available, and in the fallback list', function () {
+    assert.equal(PL.pickDefaultModel(['gpt-4o', 'gpt-5-mini', 'gpt-6-luna'], null), 'gpt-6-luna');
+    assert.equal(PL.pickDefaultModel(PL.FALLBACK_MODELS, null), 'gpt-6-luna');
+    assert.equal(PL.FALLBACK_MODELS[0], 'gpt-6-luna');
+    assert.deepEqual(PL.filterChatModels(['gpt-6-luna']), ['gpt-6-luna'], 'not filtered out');
+  });
+
   // ---- rendering
   test('escapeHtml escapes special characters', function () {
     assert.equal(PL.escapeHtml('<a href="x">&\'</a>'), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;');

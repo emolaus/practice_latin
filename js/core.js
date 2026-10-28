@@ -64,10 +64,10 @@
   const DEFAULT_GRAMMAR = ['nominative', 'accusative', 'genitive', 'singular', 'plural', 'present', 'indicative'];
 
   /** Used when the model list cannot be fetched from the API. */
-  const FALLBACK_MODELS = ['gpt-5-mini', 'gpt-5', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'];
+  const FALLBACK_MODELS = ['gpt-6-luna', 'gpt-5-mini', 'gpt-5', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'];
 
-  /** Preferred default models, best first (cheap + capable enough). */
-  const PREFERRED_MODELS = ['gpt-5-mini', 'gpt-4.1-mini', 'gpt-4o-mini', 'gpt-5', 'gpt-4.1', 'gpt-4o'];
+  /** Preferred default models, best first. gpt-6-luna is the default. */
+  const PREFERRED_MODELS = ['gpt-6-luna', 'gpt-5-mini', 'gpt-4.1-mini', 'gpt-4o-mini', 'gpt-5', 'gpt-4.1', 'gpt-4o'];
 
   /**
    * Parse the contents of vocabulary.md, a very simple markdown file:
