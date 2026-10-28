@@ -104,6 +104,21 @@
     assert.includes(p, 'Nouns:\n- nauta\nVerbs:\n- amo');
   });
 
+  test('buildSystemPrompt asks for a single short statement, not compound sentences', function () {
+    const p = PL.buildSystemPrompt(['nauta'], ['accusative', 'genitive']);
+    assert.includes(p, 'exactly ONE short, simple statement');
+    assert.includes(p, 'No semicolons');
+    assert.includes(p, '"The island\'s goddess loves the country\'s waters."');
+    assert.includes(p, 'do not try to fit them all into one sentence');
+    assert.ok(p.indexOf('as many of these as is natural') === -1, 'old "as many as possible" instruction removed');
+  });
+
+  test('buildNewProblemMessage repeats the single-statement rule', function () {
+    const m = PL.buildNewProblemMessage([]);
+    assert.includes(m, 'one new English challenge sentence');
+    assert.includes(m, 'single short statement');
+  });
+
   test('buildNewProblemMessage asks for JSON and lists recent sentences', function () {
     const m = PL.buildNewProblemMessage(['The sailor loves the forest.']);
     assert.includes(m, '"english"');

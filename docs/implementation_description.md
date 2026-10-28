@@ -105,7 +105,15 @@ Each problem sentence gets its own API **context** (a message list):
      wrap Latin words in `**…**`; use only the loaded vocabulary; the grammar focus; lenient
      marking (ignore macrons, capitalisation and punctuation; accept any valid word order or
      translation); always reply with JSON.
-   - `user`: asks for `{"english": …, "latin": …}` (`PL.buildNewProblemMessage`). It includes up to
+     - **Single-statement rule:** each challenge must be exactly one short, simple statement: one
+       main clause with one main verb, typically 4–8 words, with no semicolons and no joined
+       clauses. The prompt gives one good example ("The island's goddess loves the country's
+       waters.") and one bad, multi-clause example.
+     - The model is told to practise only one or two of the selected grammar forms per sentence
+       and to vary them across sentences. An earlier "exercise as many forms as is natural" rule
+       led to long compound sentences, so it was removed.
+   - `user`: asks for `{"english": …, "latin": …}` (`PL.buildNewProblemMessage`) and repeats the
+     single-statement rule. It includes up to
      10 recent English sentences so the model doesn't repeat itself across contexts.
    - The English sentence is shown. The Latin reference stays hidden.
 2. **Check** (or Enter) → `tutor.submitAnswer(text)` appends the attempt (`PL.buildAnswerMessage`).

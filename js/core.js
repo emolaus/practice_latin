@@ -157,7 +157,13 @@
           g.words.map(function (w) { return '- ' + w; }).join('\n');
       }).join('\n'),
       '',
-      'Grammar forms to practise (each sentence should exercise as many of these as is natural):',
+      'Challenge sentence rules:',
+      '- Each challenge is exactly ONE short, simple statement: a single main clause with one main verb, typically 4 to 8 words.',
+      '- No semicolons, no second clause, no clauses joined by "and", "but" or similar, and no lists of several actions.',
+      '- Example of the right size: "The island\'s goddess loves the country\'s waters."',
+      '- Example of what NOT to do (too long, several clauses): "The island\'s goddess loves the country\'s waters; the sailors carry the water to the farmer\'s daughter, and the farmers put the girl to flight."',
+      '',
+      'Grammar forms to practise (do not try to fit them all into one sentence; use one or two of them per sentence and vary them from sentence to sentence):',
       grammar.map(function (g) { return '- ' + g; }).join('\n'),
       'Other forms may appear only when strictly necessary to form a grammatical sentence (for example a nominative subject or a present tense verb).',
       '',
@@ -172,7 +178,8 @@
 
   function buildNewProblemMessage(recentSentences) {
     const lines = [
-      'Create a new English sentence for me to translate into Latin.',
+      'Create one new English challenge sentence for me to translate into Latin.',
+      'It must be a single short statement (one main clause, no semicolons, no joined clauses).',
       'Reply as JSON: {"english": "<the English sentence>", "latin": "<your reference Latin translation>"}.',
     ];
     if (recentSentences && recentSentences.length) {

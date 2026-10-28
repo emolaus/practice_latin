@@ -18,7 +18,7 @@ amo
 porto
 ```
 
-The user decides which grammar forms to practice by means of check boxes (Default on: Nominative, Accusative, Genitive, Singular, Plural, Present, Indicative). The app then generates problem sentences in English, using only the loaded vocabulary, for example
+The user decides which grammar forms to practice by means of check boxes (Default on: Nominative, Accusative, Genitive, Singular, Plural, Present, Indicative). The app then generates problem sentences in English, using only the loaded vocabulary. Each challenge is a single short statement (one main clause, no semicolons or joined clauses), for example
 "The sailors love the water of the forests". The user tries to translate this to latin. The app responds with helpful hints for each mistake.
 
 The app keeps a history of the conversation.
