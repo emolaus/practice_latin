@@ -105,7 +105,7 @@ Each problem sentence gets its own API **context** (a message list):
      wrap Latin words in `**…**`; use only the loaded vocabulary; the grammar focus; lenient
      marking (ignore macrons, capitalisation and punctuation; accept any valid word order or
      translation); always reply with JSON.
-     - **Single-statement rule:** each challenge must be exactly one short, simple statement: one
+     - **Single-sentence rule (statements and questions) & randomization (`PL.pickChallengeHint`):** each challenge must be a single short statement or question (one main clause, no semicolons or joined clauses). Before calling the API, the tutor samples a random hint (statement vs question with a chosen interrogative word when interrogative words are in the vocabulary, plus suggested nouns/verbs) so fresh contexts produce diverse challenges.
        main clause with one main verb, typically 4–8 words, with no semicolons and no joined
        clauses. The prompt gives one good example ("The island's goddess loves the country's
        waters.") and one bad, multi-clause example.
@@ -124,6 +124,10 @@ Each problem sentence gets its own API **context** (a message list):
    - **Correct** → the context is **discarded**, and the app automatically starts a new sentence in a
      **fresh context**. This keeps the context window uncluttered, as the backlog requires.
 3. **Show answer** reveals the hidden reference translation (no API call) and closes the problem.
+4. **Discuss challenge (`tutor.discuss(contextId, question)`)** → opens a **separate API context** for either the current challenge or any previous challenge:
+   - Each challenge is archived in `tutor.challenges` (`{id, english, latin, solved, attempts, discussion}`).
+   - `PL.buildDiscussionSystemPrompt` and `PL.buildDiscussionMessages` build a dedicated message list preloaded with system instructions (including vocabulary, grammar, the challenge sentence, reference Latin, and whether the challenge is solved or still in progress), followed by the challenge sentence, every student attempt and tutor feedback from that challenge, and any prior discussion turns.
+   - Calls `client.respond(model, messages, { json: false })` so the tutor replies in natural conversational text/markdown rather than JSON, without altering `tutor.messages` (the active grading context).
 
 State is only updated after a successful API call. A network or parse error does not corrupt the
 context. You can simply retry.
@@ -148,6 +152,21 @@ All model calls go through `OpenAIClient.respond(model, messages)` in `openai.js
   responses (with the reason, for example `max_output_tokens`), `failed` responses and empty output.
 - No `temperature` is sent, because reasoning models reject non-default values.
 - `PL.parseJsonReply` also accepts JSON wrapped in code fences or extra text.
+
+### Isolated Challenge Cards & Discussion Panel
+- In the main `#history` area, each challenge and its translation attempts/feedback are grouped into
+  their own visual **Challenge Card** (`.challenge-card`, labelled `Challenge #1`, `Challenge #2`, etc.).
+  - The card header shows a status badge (`Active API context` while open, or `Isolated context · closed`
+    once solved or superseded) and a **Discuss this challenge** button (`Discuss (n)` once discussion
+    turns exist).
+  - Legacy history entries saved before `contextId` existed are automatically grouped into challenge
+    cards and registered with `tutor.ensureChallenge(...)` on startup.
+- Clicking **Discuss this challenge** on any card (or **Discuss challenge** in the toolbar for the
+  current challenge) opens the `#discussion-panel` side pane:
+  - Displays a summary header with the challenge sentence, reference Latin (once solved/revealed),
+    and the number of preloaded attempts.
+  - Provides a dedicated message log (`#discussion-history`) and text input (`#discussion-input` +
+    **Ask** button) for open-ended conversation with the model about that challenge.
 
 ### Conversation history
 - Every problem, attempt, piece of feedback and info message is stored in `localStorage`

@@ -10,6 +10,9 @@ patria
 puella
 silva
 
+# Adjectives
+pulcher
+
 # Verbs
 amo
 fugo

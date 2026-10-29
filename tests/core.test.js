@@ -104,19 +104,22 @@
     assert.includes(p, 'Nouns:\n- nauta\nVerbs:\n- amo');
   });
 
-  test('buildSystemPrompt asks for a single short statement, not compound sentences', function () {
+  test('buildSystemPrompt asks for a single short statement or question, not compound sentences', function () {
     const p = PL.buildSystemPrompt(['nauta'], ['accusative', 'genitive']);
-    assert.includes(p, 'exactly ONE short, simple statement');
+    assert.includes(p, 'exactly ONE short, simple sentence (either a statement or a question)');
+    assert.includes(p, 'interrogative words');
     assert.includes(p, 'No semicolons');
     assert.includes(p, '"The island\'s goddess loves the country\'s waters."');
+    assert.includes(p, '"Who loves the farmer\'s daughter?"');
     assert.includes(p, 'do not try to fit them all into one sentence');
     assert.ok(p.indexOf('as many of these as is natural') === -1, 'old "as many as possible" instruction removed');
   });
 
-  test('buildNewProblemMessage repeats the single-statement rule', function () {
+  test('buildNewProblemMessage repeats the single-sentence and question rules', function () {
     const m = PL.buildNewProblemMessage([]);
     assert.includes(m, 'one new English challenge sentence');
-    assert.includes(m, 'single short statement');
+    assert.includes(m, 'single short statement or question');
+    assert.includes(m, 'interrogative words');
   });
 
   test('buildNewProblemMessage asks for JSON and lists recent sentences', function () {
@@ -127,11 +130,92 @@
     assert.ok(PL.buildNewProblemMessage([]).indexOf('Do not repeat') === -1);
   });
 
+  test('pickChallengeHint picks statements and questions with different interrogative words and vocabulary', function () {
+    const vocab = PL.parseVocabulary('# Nouns\nagricola\naqua\nfilia\n# Verbs\namo\nporto\n# Interrogative pronouns\nquid\nquis');
+    const seq1 = [0.1, 0.0, 0.5, 0.9];
+    const hQ1 = PL.pickChallengeHint(vocab, function () { return seq1.shift(); });
+    assert.equal(hQ1.kind, 'question');
+    assert.equal(hQ1.interrogative, 'quid');
+    assert.deepEqual(hQ1.picks, [
+      { category: 'Nouns', words: ['aqua'] },
+      { category: 'Verbs', words: ['porto'] },
+    ]);
+
+    const seq2 = [0.39, 0.9, 0.0, 0.0];
+    const hQ2 = PL.pickChallengeHint(vocab, function () { return seq2.shift(); });
+    assert.equal(hQ2.kind, 'question');
+    assert.equal(hQ2.interrogative, 'quis');
+
+    const seq3 = [0.4, 0.0, 0.5, 0.0];
+    const hS = PL.pickChallengeHint(vocab, function () { return seq3.shift(); });
+    assert.equal(hS.kind, 'statement');
+    assert.equal(hS.interrogative, null);
+    assert.deepEqual(hS.picks, [
+      { category: 'Nouns', words: ['agricola', 'filia'] },
+      { category: 'Verbs', words: ['amo'] },
+    ]);
+
+    const noQ = PL.parseVocabulary('# Nouns\nnauta\n# Verbs\namo');
+    assert.equal(PL.pickChallengeHint(noQ, function () { return 0.0; }).kind, 'statement');
+  });
+
+  test('buildNewProblemMessage formats question and statement hints', function () {
+    const qMsg = PL.buildNewProblemMessage([], {
+      kind: 'question',
+      interrogative: 'quis',
+      picks: [{ category: 'Nouns', words: ['aqua'] }, { category: 'Verbs', words: ['porto'] }],
+    });
+    assert.includes(qMsg, 'QUESTION that uses **quis**');
+    assert.includes(qMsg, '**aqua**');
+    assert.includes(qMsg, '**porto**');
+
+    const sMsg = PL.buildNewProblemMessage([], {
+      kind: 'statement',
+      interrogative: null,
+      picks: [{ category: 'Nouns', words: ['filia', 'aqua'] }, { category: 'Verbs', words: ['porto'] }],
+    });
+    assert.includes(sMsg, 'STATEMENT (not a question)');
+    assert.includes(sMsg, '**filia**, **aqua**');
+  });
+
   test('buildAnswerMessage includes the answer and asks for hints without the solution', function () {
     const m = PL.buildAnswerMessage('nautae aquam amant');
     assert.includes(m, 'nautae aquam amant');
     assert.includes(m, '"correct"');
     assert.includes(m, 'do NOT reveal');
+  });
+
+  test('buildDiscussionSystemPrompt & buildDiscussionMessages preload challenge context and discussion turns', function () {
+    const vocab = PL.parseVocabulary('# Nouns\nnauta\nsilva\n# Verbs\namo');
+    const challenge = {
+      id: 1,
+      english: 'The sailors love the forests.',
+      latin: 'Nautae silvas amant.',
+      solved: false,
+      attempts: [
+        { answer: 'Nauta silvas amat', feedback: '- **nauta** should be plural', correct: false },
+      ],
+    };
+    const msgs = PL.buildDiscussionMessages(vocab, ['accusative', 'plural'], challenge, [
+      { role: 'user', content: 'Why is nauta plural here?' },
+    ]);
+    assert.equal(msgs[0].role, 'system');
+    assert.includes(msgs[0].content, 'Do NOT wrap your reply in JSON');
+    assert.includes(msgs[0].content, 'The sailors love the forests.');
+    assert.includes(msgs[0].content, '**Nautae silvas amant.**');
+    assert.includes(msgs[0].content, 'still working on this challenge');
+    assert.equal(msgs[1].role, 'assistant');
+    assert.includes(msgs[1].content, 'The sailors love the forests.');
+    assert.equal(msgs[2].role, 'user');
+    assert.includes(msgs[2].content, 'Nauta silvas amat');
+    assert.equal(msgs[3].role, 'assistant');
+    assert.includes(msgs[3].content, '**nauta** should be plural');
+    assert.equal(msgs[4].role, 'user');
+    assert.equal(msgs[4].content, 'Why is nauta plural here?');
+
+    // Solved challenge mentions completed status
+    const solvedPrompt = PL.buildDiscussionSystemPrompt(vocab, ['accusative'], Object.assign({}, challenge, { solved: true }));
+    assert.includes(solvedPrompt, 'already been completed');
   });
 
   // ---- reply parsing
@@ -236,4 +320,3 @@
     assert.deepEqual(h.load(), []);
   });
 })();
-

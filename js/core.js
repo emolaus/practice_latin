@@ -158,9 +158,10 @@
       }).join('\n'),
       '',
       'Challenge sentence rules:',
-      '- Each challenge is exactly ONE short, simple statement: a single main clause with one main verb, typically 4 to 8 words.',
+      '- Each challenge is exactly ONE short, simple sentence (either a statement or a question): a single main clause with one main verb, typically 4 to 8 words.',
+      '- If the vocabulary includes interrogative words (such as **quis**), regularly generate questions as well as statements so the student practises them.',
       '- No semicolons, no second clause, no clauses joined by "and", "but" or similar, and no lists of several actions.',
-      '- Example of the right size: "The island\'s goddess loves the country\'s waters."',
+      '- Examples of the right size: "The island\'s goddess loves the country\'s waters." or "Who loves the farmer\'s daughter?"',
       '- Example of what NOT to do (too long, several clauses): "The island\'s goddess loves the country\'s waters; the sailors carry the water to the farmer\'s daughter, and the farmers put the girl to flight."',
       '',
       'Grammar forms to practise (do not try to fit them all into one sentence; use one or two of them per sentence and vary them from sentence to sentence):',
@@ -176,12 +177,72 @@
     ].join('\n');
   }
 
-  function buildNewProblemMessage(recentSentences) {
+  /**
+   * Pick a random challenge hint from the vocabulary so each new context nudges
+   * the model toward a different sentence type (statement vs question) and a
+   * different selection of words (verb, nouns, interrogative word, etc.).
+   *
+   * `rng` is a () => [0,1) function (defaults to Math.random; injectable for tests).
+   * Returns { kind: 'statement'|'question', interrogative: string|null, picks: [{category, words}] }.
+   */
+  function pickChallengeHint(vocabulary, rng) {
+    rng = rng || Math.random;
+    const groups = groupVocabulary(vocabulary);
+    const isInterrogative = function (c) { return /interrog|question/i.test(c || ''); };
+    const sample = function (arr, n) {
+      const copy = arr.slice();
+      const out = [];
+      n = Math.min(n, copy.length);
+      for (let i = 0; i < n; i++) {
+        const idx = Math.floor(rng() * copy.length);
+        out.push(copy.splice(idx, 1)[0]);
+      }
+      return out;
+    };
+
+    const qWords = [];
+    groups.forEach(function (g) {
+      if (isInterrogative(g.category)) qWords.push.apply(qWords, g.words);
+    });
+
+    const isQuestion = qWords.length > 0 && rng() < 0.4;
+    const interrogative = isQuestion ? sample(qWords, 1)[0] : null;
+
+    const picks = [];
+    groups.forEach(function (g) {
+      if (isInterrogative(g.category) || !g.words.length) return;
+      const count = /noun/i.test(g.category) ? (isQuestion ? 1 : 2) : 1;
+      picks.push({ category: g.category || 'Word', words: sample(g.words, count) });
+    });
+
+    return {
+      kind: isQuestion ? 'question' : 'statement',
+      interrogative: interrogative,
+      picks: picks,
+    };
+  }
+
+  function buildNewProblemMessage(recentSentences, hint) {
     const lines = [
       'Create one new English challenge sentence for me to translate into Latin.',
-      'It must be a single short statement (one main clause, no semicolons, no joined clauses).',
-      'Reply as JSON: {"english": "<the English sentence>", "latin": "<your reference Latin translation>"}.',
+      'It must be a single short statement or question (one main clause, no semicolons, no joined clauses). If the vocabulary contains interrogative words, include questions among the challenges.',
     ];
+    if (hint) {
+      lines.push('For variety in this challenge:');
+      if (hint.kind === 'question' && hint.interrogative) {
+        lines.push('- Sentence type: make this challenge a QUESTION that uses **' + hint.interrogative + '** (in an appropriate inflected form).');
+      } else {
+        lines.push('- Sentence type: make this challenge a STATEMENT (not a question).');
+      }
+      (hint.picks || []).forEach(function (p) {
+        if (p.words && p.words.length) {
+          lines.push('- Suggested ' + p.category.toLowerCase() + ' to build the sentence around: ' +
+            p.words.map(function (w) { return '**' + w + '**'; }).join(', ') +
+            ' (you may add other vocabulary words as needed for a natural sentence).');
+        }
+      });
+    }
+    lines.push('Reply as JSON: {"english": "<the English sentence>", "latin": "<your reference Latin translation>"}.');
     if (recentSentences && recentSentences.length) {
       lines.push('Do not repeat any of these recent sentences:');
       recentSentences.forEach(function (s) { lines.push('- ' + s); });
@@ -197,6 +258,77 @@
       'If it is correct, give brief praise (and optionally mention a valid alternative).',
       'If it is not correct, list each mistake as a separate "- " bullet with a helpful hint (which word, what case/number/ending is needed and why), but do NOT reveal the full correct sentence.',
     ].join('\n');
+  }
+
+  /**
+   * System instructions for a separate "Discuss challenge" context, preloaded
+   * with a challenge (current or previous) so the student can converse openly
+   * with the tutor about grammar, vocabulary, mistakes, or alternatives.
+   */
+  function buildDiscussionSystemPrompt(vocabulary, grammarIds, challenge) {
+    challenge = challenge || {};
+    const grammar = describeGrammar(grammarIds);
+    const lines = [
+      'You are a patient, knowledgeable Latin tutor having an open follow-up discussion with a student about a specific Latin translation challenge.',
+      '',
+      'Language and formatting rules:',
+      '- Always communicate in English.',
+      '- Use Latin only when quoting or highlighting specific Latin words or phrases; wrap every Latin word or phrase in **double asterisks**.',
+      '- Reply in natural, conversational text (you may use "- " bullet lists and *italics*). Do NOT wrap your reply in JSON.',
+      '',
+      'Student\'s loaded vocabulary:',
+      groupVocabulary(vocabulary).map(function (g) {
+        return (g.category ? g.category : 'Other words') + ':\n' +
+          g.words.map(function (w) { return '- ' + w; }).join('\n');
+      }).join('\n'),
+      '',
+      'Grammar forms being practised:',
+      grammar.map(function (g) { return '- ' + g; }).join('\n'),
+      '',
+      'Challenge being discussed:',
+      '- English sentence: "' + (challenge.english || '') + '"',
+    ];
+    if (challenge.latin) {
+      lines.push('- Reference Latin translation: **' + challenge.latin + '**');
+    }
+    if (challenge.solved) {
+      lines.push('- Status: This challenge has already been completed. You may freely discuss the full translation, grammar, word order, and valid alternatives.');
+    } else {
+      lines.push('- Status: The student is still working on this challenge. Answer their questions about grammar, vocabulary, cases, and endings openly and helpfully, but avoid giving away the complete final Latin sentence unless they explicitly ask for the answer.');
+    }
+    return lines.join('\n');
+  }
+
+  /**
+   * Build the full message list for a separate discussion context preloaded
+   * with the challenge's history (problem, attempts, feedback) followed by any
+   * discussion turns so far.
+   */
+  function buildDiscussionMessages(vocabulary, grammarIds, challenge, discussionTurns) {
+    challenge = challenge || {};
+    const messages = [
+      { role: 'system', content: buildDiscussionSystemPrompt(vocabulary, grammarIds, challenge) },
+    ];
+    if (challenge.english) {
+      messages.push({
+        role: 'assistant',
+        content: 'Challenge sentence to translate into Latin: "' + challenge.english + '"',
+      });
+    }
+    (challenge.attempts || []).forEach(function (a) {
+      if (a && a.answer) {
+        messages.push({ role: 'user', content: 'My Latin translation attempt: ' + a.answer });
+      }
+      if (a && a.feedback) {
+        messages.push({ role: 'assistant', content: a.feedback });
+      }
+    });
+    (discussionTurns || []).forEach(function (t) {
+      if (t && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string') {
+        messages.push({ role: t.role, content: t.content });
+      }
+    });
+    return messages;
   }
 
   /** Extract a JSON object from a model reply, tolerating code fences or chatter. */
@@ -331,8 +463,11 @@
     groupVocabulary: groupVocabulary,
     describeGrammar: describeGrammar,
     buildSystemPrompt: buildSystemPrompt,
+    pickChallengeHint: pickChallengeHint,
     buildNewProblemMessage: buildNewProblemMessage,
     buildAnswerMessage: buildAnswerMessage,
+    buildDiscussionSystemPrompt: buildDiscussionSystemPrompt,
+    buildDiscussionMessages: buildDiscussionMessages,
     parseJsonReply: parseJsonReply,
     validateProblem: validateProblem,
     validateEvaluation: validateEvaluation,
@@ -343,4 +478,3 @@
     createHistoryStore: createHistoryStore,
   });
 })(typeof window !== 'undefined' ? window : globalThis);
-

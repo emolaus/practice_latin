@@ -52,6 +52,8 @@
       <div class="chat-toolbar">
         <button type="button" id="new-sentence">New sentence</button>
         <button type="button" id="show-answer" class="secondary">Show answer</button>
+        <button type="button" id="discuss-current" class="secondary" title="Open a separate discussion context for the current challenge">Discuss challenge</button>
+        <span class="context-note">Each challenge is an isolated API context</span>
         <span class="spacer"></span>
         <button type="button" id="clear-history" class="link">Clear history</button>
       </div>
@@ -63,6 +65,25 @@
         <button type="submit" id="send">Check</button>
       </form>
     </main>
+
+    <aside class="discussion" id="discussion-panel" hidden aria-label="Discuss challenge">
+      <div class="discussion-header">
+        <div>
+          <h2 id="discussion-title">Discuss Challenge</h2>
+          <span class="context-badge discussion-badge">Separate API context &middot; preloaded with challenge</span>
+        </div>
+        <button type="button" id="close-discussion" class="secondary small">Close</button>
+      </div>
+
+      <div id="discussion-context" class="discussion-context"></div>
+
+      <div id="discussion-history" class="discussion-history" aria-live="polite"></div>
+
+      <form id="discussion-form" class="discussion-form">
+        <textarea id="discussion-input" rows="2" placeholder="Ask about the grammar, vocabulary, or translation&hellip; (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button type="submit" id="discussion-send">Ask</button>
+      </form>
+    </aside>
   </div>
 
   <script src="js/core.js"></script>
@@ -71,4 +92,3 @@
   <script src="js/app.js"></script>
 </body>
 </html>
-

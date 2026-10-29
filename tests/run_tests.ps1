@@ -46,6 +46,7 @@ $checks = [ordered]@{
   'model list populated'             = $app -match '<option value="gpt-'
   'page title set'                   = $app -match '<title>Practice Latin Vocabulary and Grammar</title>'
   'heading set'                      = $app -match '<h1>Practice Latin Vocabulary and Grammar</h1>'
+  'discussion panel rendered'        = $app -match 'id="discussion-panel"' -and $app -match 'id="discussion-input"'
   'welcome message shown'            = $app -match 'Welcome!'
 }
 foreach ($k in $checks.Keys) {
